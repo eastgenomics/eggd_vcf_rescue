@@ -14,18 +14,18 @@
       "class": "file",
       "optional": false,
       "patterns": [
-        "*vcf"
+        "*.vcf"
       ],
-      "help": ""
+      "help": "Input genomic vcf"
     },
     {
       "name": "hotspot_vcf",
       "class": "file",
       "optional": false,
       "patterns": [
-        "*vcf"
+        "*vcf.gz"
       ],
-      "help": ""
+      "help": "Compressed whitelist vcf"
     }
   ],
   "outputSpec": [
