@@ -42,8 +42,8 @@
     "execDepends": [
     ],
     "distribution" : "Ubuntu",
-    "release": "20.04" ,
-    "version": "0", 
+    "release": "20.04",
+    "version": "0",
     "file": "src/eggd_tso500_rescue.sh",
     "interpreter": "bash",
     "timeoutPolicy": {
