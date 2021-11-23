@@ -10,7 +10,7 @@ During the validation of the TSO500 local app v2.2 analysis pipeline, some known
 
 ## What data are required for this app to run?
 Required inputs for this app:
-* a genomic gvcf (.genome.vcf)
+* a genomic gvcf (*.genome.vcf)
 * a compressed whitelist vcf containing variants needed to always be filtered in (*.vcf.gz)
 
 ## What does this app output?
