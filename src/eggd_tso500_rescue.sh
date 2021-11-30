@@ -13,7 +13,7 @@ main() {
     dx download "$hotspot_vcf" 
 
     # Get sample prefix
-    sample_prefix=$(echo "${gvcf_name/_MergedSmallVariants.genome.vcf/""}")
+    sample_prefix=$("${gvcf_name/_MergedSmallVariants.genome.vcf/""}")
 
     # Remove reference calls from gvcf
     bcftools view -m2 $gvcf_name -o ${sample_prefix}.vcf 
@@ -29,7 +29,7 @@ main() {
     bcftools index ${sample_prefix}_pass.vcf.gz
     bcftools index ${hotspot_vcf_name} 
 
-    # Intersect non-pass vcf with hospot list and keep sample vcf entries
+    # Intersect non-pass vcf with hotspot list and keep sample vcf entries
     bcftools isec ${sample_prefix}_lowSupport.vcf.gz ${hotspot_vcf_name} -n =2 -w 1 \
     -o ${sample_prefix}_filtered_hotspots.vcf.gz -O z
 
@@ -45,11 +45,5 @@ main() {
 
     # Upload output vcf
     filtered_vcf=$(dx upload ${sample_prefix}_withLowSupportHotspots.vcf --brief)
-
-    # The following line(s) use the utility dx-jobutil-add-output to format and
-    # add output variables to your job's output as appropriate for the output
-    # class.  Run "dx-jobutil-add-output -h" for more information on what it
-    # does.
-
     dx-jobutil-add-output filtered_vcf "$filtered_vcf" --class=file
 }
