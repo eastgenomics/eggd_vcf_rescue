@@ -9,14 +9,14 @@ main() {
     echo "Value of hotspot_vcf: '$hotspot_vcf'"
 
     # Download input files
-    dx download "$gvcf" 
-    dx download "$hotspot_vcf" 
+    dx download "$gvcf"
+    dx download "$hotspot_vcf"
 
     # Get sample prefix
     sample_prefix=$("${gvcf_name/_MergedSmallVariants.genome.vcf/""}")
 
     # Remove reference calls from gvcf
-    bcftools view -m2 $gvcf_name -o ${sample_prefix}.vcf 
+    bcftools view -m2 $gvcf_name -o ${sample_prefix}.vcf
 
     # Create a vcf of all NON-PASS variants
     bcftools filter -i 'FILTER!="PASS"' ${sample_prefix}.vcf  -o ${sample_prefix}_lowSupport.vcf.gz -O z
@@ -24,10 +24,10 @@ main() {
     # Create a vcf with only PASS variants
     bcftools view -f .,PASS ${sample_prefix}.vcf  -o  ${sample_prefix}_pass.vcf.gz -O z
 
-    # Zip and index vcf files to use with bcftools isec command 
+    # Zip and index vcf files to use with bcftools isec command
     bcftools index ${sample_prefix}_lowSupport.vcf.gz
     bcftools index ${sample_prefix}_pass.vcf.gz
-    bcftools index ${hotspot_vcf_name} 
+    bcftools index ${hotspot_vcf_name}
 
     # Intersect non-pass vcf with hotspot list and keep sample vcf entries
     bcftools isec ${sample_prefix}_lowSupport.vcf.gz ${hotspot_vcf_name} -n =2 -w 1 \
@@ -36,7 +36,7 @@ main() {
     # Add OPA flag to everything in that vcf
     bcftools filter -e 'FORMAT/DP>0' -s OPA -m + ${sample_prefix}_filtered_hotspots.vcf.gz \
     -o ${sample_prefix}_OPAvariants.vcf.gz -O z
-    
+
     bcftools index ${sample_prefix}_OPAvariants.vcf.gz
 
     # Concatenate OPA flagged non-pass variant vcf with pass vcf
