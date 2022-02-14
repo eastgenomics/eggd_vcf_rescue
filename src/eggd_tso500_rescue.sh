@@ -11,26 +11,37 @@ main() {
     # Download input files
     dx download "$gvcf"
     dx download "$hotspot_vcf"
+    dx download "$fasta_tar"
+
+    #Unpack fasta tar
+    tar xzf $fasta_tar_name
 
     # Get sample prefix
-    sample_prefix=$("${gvcf_name/_MergedSmallVariants.genome.vcf/""}")
+    sample_prefix=${gvcf_name/_MergedSmallVariants.genome.vcf/}
 
     # Remove reference calls from gvcf
     bcftools view -m2 $gvcf_name -o ${sample_prefix}.vcf
 
+    # Remove chr prefix from patient vcf to match the reference genome
+    awk '{gsub(/chr/,""); print}' ${sample_prefix}.vcf > ${sample_prefix}_noChr.vcf
+
+    # Normalise and left align filtered vcf and hotspots vcf
+    bcftools norm -m -any -f genome.fa ${sample_prefix}_noChr.vcf -o ${sample_prefix}_norm.vcf
+    bcftools norm -m -any -f genome.fa ${hotspot_vcf_name} -o ${hotspot_vcf_prefix}_norm.vcf.gz -O z
+
     # Create a vcf of all NON-PASS variants
-    bcftools filter -i 'FILTER!="PASS"' ${sample_prefix}.vcf  -o ${sample_prefix}_lowSupport.vcf.gz -O z
+    bcftools filter -i 'FILTER!="PASS"' ${sample_prefix}_norm.vcf  -o ${sample_prefix}_lowSupport.vcf.gz -O z
 
     # Create a vcf with only PASS variants
-    bcftools view -f .,PASS ${sample_prefix}.vcf  -o  ${sample_prefix}_pass.vcf.gz -O z
+    bcftools view -f .,PASS ${sample_prefix}_norm.vcf  -o  ${sample_prefix}_pass.vcf.gz -O z
 
     # Zip and index vcf files to use with bcftools isec command
     bcftools index ${sample_prefix}_lowSupport.vcf.gz
     bcftools index ${sample_prefix}_pass.vcf.gz
-    bcftools index ${hotspot_vcf_name}
+    bcftools index ${hotspot_vcf_prefix}_norm.vcf.gz
 
     # Intersect non-pass vcf with hotspot list and keep sample vcf entries
-    bcftools isec ${sample_prefix}_lowSupport.vcf.gz ${hotspot_vcf_name} -n =2 -w 1 \
+    bcftools isec ${sample_prefix}_lowSupport.vcf.gz ${hotspot_vcf_prefix}_norm.vcf.gz -n =2 -w 1 \
     -o ${sample_prefix}_filtered_hotspots.vcf.gz -O z
 
     # Add OPA flag to everything in that vcf
