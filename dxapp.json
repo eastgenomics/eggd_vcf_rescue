@@ -26,6 +26,20 @@
         "*vcf.gz"
       ],
       "help": "Compressed whitelist vcf"
+    },
+    {
+      "name": "fasta_tar",
+      "label": "Reference genome fasta and index",
+      "class": "file",
+      "optional": false,
+      "patterns": ["*.fasta-index.tar.gz"],
+      "help": "tar.gz containing genome.fa and genome.fa.fai. Must match reference genome build used.",
+      "default":{
+          "$dnanexus_link": {
+            "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
+            "id": "file-F3zxG0Q4fXX9YFjP1v5jK9jf"
+          }
+        }
     }
   ],
   "outputSpec": [
@@ -33,7 +47,7 @@
       "name": "filtered_vcf",
       "class": "file",
       "patterns": [
-        "*"
+        "*vcf"
       ],
       "help": ""
     }
