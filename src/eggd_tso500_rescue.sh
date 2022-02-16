@@ -55,6 +55,6 @@ main() {
     -o ${sample_prefix}_withLowSupportHotspots.vcf.gz -O z
 
     # Upload output vcf
-    filtered_vcf=$(dx upload ${sample_prefix}_withLowSupportHotspots.vcf --brief)
+    filtered_vcf=$(dx upload ${sample_prefix}_withLowSupportHotspots.vcf.gz --brief)
     dx-jobutil-add-output filtered_vcf "$filtered_vcf" --class=file
 }
