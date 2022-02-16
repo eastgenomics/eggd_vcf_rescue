@@ -26,14 +26,19 @@ main() {
     awk '{gsub(/chr/,""); print}' ${sample_prefix}.vcf > ${sample_prefix}_noChr.vcf
 
     # Normalise and left align filtered vcf and hotspots vcf
-    bcftools norm -m -any -f genome.fa ${sample_prefix}_noChr.vcf -o ${sample_prefix}_norm.vcf
-    bcftools norm -m -any -f genome.fa ${hotspot_vcf_name} -o ${hotspot_vcf_prefix}_norm.vcf.gz -O z
+    bcftools norm -m -any -f genome.fa ${sample_prefix}_noChr.vcf \
+    -o ${sample_prefix}_norm.vcf
+
+    bcftools norm -m -any -f genome.fa ${hotspot_vcf_name} \
+    -o ${hotspot_vcf_prefix}_norm.vcf.gz -Oz
 
     # Create a vcf of all NON-PASS variants
-    bcftools filter -i 'FILTER!="PASS"' ${sample_prefix}_norm.vcf  -o ${sample_prefix}_lowSupport.vcf.gz -O z
+    bcftools filter -i 'FILTER!="PASS"' ${sample_prefix}_norm.vcf \
+    -o ${sample_prefix}_lowSupport.vcf.gz -Oz
 
     # Create a vcf with only PASS variants
-    bcftools view -f .,PASS ${sample_prefix}_norm.vcf  -o  ${sample_prefix}_pass.vcf.gz -O z
+    bcftools view -f .,PASS ${sample_prefix}_norm.vcf  -Oz \
+    -o ${sample_prefix}_pass.vcf.gz
 
     # Zip and index vcf files to use with bcftools isec command
     bcftools index ${sample_prefix}_lowSupport.vcf.gz
@@ -41,18 +46,18 @@ main() {
     bcftools index ${hotspot_vcf_prefix}_norm.vcf.gz
 
     # Intersect non-pass vcf with hotspot list and keep sample vcf entries
-    bcftools isec ${sample_prefix}_lowSupport.vcf.gz ${hotspot_vcf_prefix}_norm.vcf.gz -n =2 -w 1 \
-    -o ${sample_prefix}_filtered_hotspots.vcf.gz -O z
+    bcftools isec ${sample_prefix}_lowSupport.vcf.gz ${hotspot_vcf_prefix}_norm.vcf.gz \
+    -n =2 -w 1 -Oz -o ${sample_prefix}_filtered_hotspots.vcf.gz -Oz
 
     # Add OPA flag to everything in that vcf
     bcftools filter -e 'FORMAT/DP>0' -s OPA -m + ${sample_prefix}_filtered_hotspots.vcf.gz \
-    -o ${sample_prefix}_OPAvariants.vcf.gz -O z
+    -Oz -o ${sample_prefix}_OPAvariants.vcf.gz
 
     bcftools index ${sample_prefix}_OPAvariants.vcf.gz
 
     # Concatenate OPA flagged non-pass variant vcf with pass vcf
     bcftools concat -a  ${sample_prefix}_pass.vcf.gz ${sample_prefix}_OPAvariants.vcf.gz \
-    -o ${sample_prefix}_withLowSupportHotspots.vcf.gz -O z
+    -Oz -o ${sample_prefix}_withLowSupportHotspots.vcf.gz
 
     # Upload output vcf
     filtered_vcf=$(dx upload ${sample_prefix}_withLowSupportHotspots.vcf.gz --brief)
