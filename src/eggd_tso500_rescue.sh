@@ -52,7 +52,7 @@ main() {
 
     # Concatenate OPA flagged non-pass variant vcf with pass vcf
     bcftools concat -a  ${sample_prefix}_pass.vcf.gz ${sample_prefix}_OPAvariants.vcf.gz \
-    -o ${sample_prefix}_withLowSupportHotspots.vcf
+    -o ${sample_prefix}_withLowSupportHotspots.vcf.gz -O z
 
     # Upload output vcf
     filtered_vcf=$(dx upload ${sample_prefix}_withLowSupportHotspots.vcf --brief)
