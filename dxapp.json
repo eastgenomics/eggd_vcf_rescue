@@ -25,7 +25,7 @@
       "patterns": [
         "*vcf.gz"
       ],
-      "help": "Compressed whitelist vcf"
+      "help": "Compressed rescue vcf"
     },
     {
       "name": "fasta_tar",
@@ -47,7 +47,7 @@
       "name": "filtered_vcf",
       "class": "file",
       "patterns": [
-        "*vcf"
+        "*.vcf.gz"
       ],
       "help": ""
     }
