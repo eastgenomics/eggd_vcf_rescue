@@ -23,40 +23,30 @@ main() {
     bcftools view -m2 $gvcf_name -o ${sample_prefix}.vcf
 
     # Remove chr prefix from patient vcf to match the reference genome
+    # This app was created for output of TSO500 which only contains chr1-22,X & Y
+    # It should be reaccessed for different input vcfs.
     awk '{gsub(/chr/,""); print}' ${sample_prefix}.vcf > ${sample_prefix}_noChr.vcf
 
-    # Normalise and left align filtered vcf and hotspots vcf
+    # Normalise and left align filtered vcf
     bcftools norm -m -any -f genome.fa ${sample_prefix}_noChr.vcf \
     -o ${sample_prefix}_norm.vcf
 
-    bcftools norm -m -any -f genome.fa ${hotspot_vcf_name} \
-    -o ${hotspot_vcf_prefix}_norm.vcf.gz -Oz
-
-    # Create a vcf of all NON-PASS variants
-    bcftools filter -i 'FILTER!="PASS"' ${sample_prefix}_norm.vcf \
-    -o ${sample_prefix}_lowSupport.vcf.gz -Oz
+    # Create a vcf of all NON-PASS which match the OPA hotspots
+    bcftools filter -i 'FILTER!="PASS"' ${sample_prefix}_norm.vcf.gz   \
+    | bcftools filter -m + -s 'OPA' --mask-file ${hotspot_vcf_name} - \
+    | bcftools filter -i 'FILTER~"OPA"' - -Oz -o ${sample_prefix}.rescued.vcf.gz
 
     # Create a vcf with only PASS variants
     bcftools view -f .,PASS ${sample_prefix}_norm.vcf  -Oz \
     -o ${sample_prefix}_pass.vcf.gz
 
     # Zip and index vcf files to use with bcftools isec command
-    bcftools index ${sample_prefix}_lowSupport.vcf.gz
     bcftools index ${sample_prefix}_pass.vcf.gz
-    bcftools index ${hotspot_vcf_prefix}_norm.vcf.gz
+    bcftools index ${sample_prefix}.rescued.vcf.gz
 
-    # Intersect non-pass vcf with hotspot list and keep sample vcf entries
-    bcftools isec ${sample_prefix}_lowSupport.vcf.gz ${hotspot_vcf_prefix}_norm.vcf.gz \
-    -n =2 -w 1 -Oz -o ${sample_prefix}_filtered_hotspots.vcf.gz -Oz
-
-    # Add OPA flag to everything in that vcf
-    bcftools filter -e 'FORMAT/DP>0' -s OPA -m + ${sample_prefix}_filtered_hotspots.vcf.gz \
-    -Oz -o ${sample_prefix}_OPAvariants.vcf.gz
-
-    bcftools index ${sample_prefix}_OPAvariants.vcf.gz
 
     # Concatenate OPA flagged non-pass variant vcf with pass vcf
-    bcftools concat -a  ${sample_prefix}_pass.vcf.gz ${sample_prefix}_OPAvariants.vcf.gz \
+    bcftools concat -a  ${sample_prefix}_pass.vcf.gz ${sample_prefix}.rescue.vcf.gz \
     -Oz -o ${sample_prefix}_withLowSupportHotspots.vcf.gz
 
     # Upload output vcf
