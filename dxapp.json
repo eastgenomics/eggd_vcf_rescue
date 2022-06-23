@@ -69,13 +69,14 @@
       {
         "name": "htslib",
         "project": "project-Fkb6Gkj433GVVvj73J7x8KbV",
-        "folder": "/app_assets/htslib/htslib_v1.14.0",
-        "version": "1.14.0"
+        "folder": "/app_assets/htslib/htslib_v1.15.0",
+        "version": "1.15.0"
       }
     ]
   },
   "developers":[
     "user-toutoua",
+    "jethror1",
     "org-emee_1"
   ],
   "authorizedUsers": [
