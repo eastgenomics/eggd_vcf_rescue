@@ -35,7 +35,7 @@ main() {
         | bcftools filter -i 'FILTER~"OPA"' - -Oz -o ${sample_prefix}.rescued.vcf.gz
 
     # Create a vcf with only PASS variants
-    bcftools view -f .,PASS ${sample_prefix}_norm.vcf  -Oz \
+    bcftools view -f PASS ${sample_prefix}_norm.vcf  -Oz \
         -o ${sample_prefix}_pass.vcf.gz
 
     # Zip and index vcf files to use with bcftools isec command
@@ -52,3 +52,7 @@ main() {
 
     echo "Done"
 }
+
+
+
+
