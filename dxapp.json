@@ -1,7 +1,7 @@
 {
-  "name": "eggd_tso500_rescue",
-  "title": "TSO500 Rescue",
-  "summary": "Filter in low support variants on specified locations",
+  "name": "eggd_vcf_rescue",
+  "title": "VCF Rescue",
+  "summary": "Filter in low support variants on specified locations or recover filtered out variants",
   "properties": {
     "githubRelease": "1.0.0"
   },
@@ -19,7 +19,29 @@
       "help": "Input genomic vcf"
     },
     {
-      "name": "hotspot_vcf",
+      "name": "filtered_vcf",
+      "label": "Filtered VCF",
+      "class": "file",
+      "optional": true,
+      "patterns": [
+        "*.vcf",
+        "*.vcf.gz"
+      ],
+      "help": ""
+    },
+    {
+      "name": "unfiltered_vcf",
+      "label": "Unfiltered VCF",
+      "class": "file",
+      "optional": true,
+      "patterns": [
+        "*.vcf",
+        "*.vcf.gz"
+      ],
+      "help": ""
+    },
+    {
+      "name": "rescue_vcf",
       "class": "file",
       "optional": false,
       "patterns": [
@@ -40,6 +62,20 @@
             "id": "file-F3zxG0Q4fXX9YFjP1v5jK9jf"
           }
         }
+    },
+    {
+      "name": "non_pass_rescue",
+      "label": "non pass rescue",
+      "class": "boolean",
+      "optional": true,
+      "help": "determines if to run as non-pass rescue, must be used with gvcf input"
+    },
+    {
+      "name": "rescue_filtered",
+      "label": "rescue filtered",
+      "class": "boolean",
+      "optional": true,
+      "help": "determines if to run as rescuing filtered out variants, must be used with filtered and unfiltered vcf inputs"
     }
   ],
   "outputSpec": [
