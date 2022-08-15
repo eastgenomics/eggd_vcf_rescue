@@ -42,7 +42,7 @@ _validate_inputs() {
 }
 
 
-_non_pass_rescue() {
+_rescue_non_pass() {
     : '
     Rescues non-pass variants from gvcf against given vcf of variants to retain, uploads
     VCF of PASS + rescued variants and exits app.
@@ -72,7 +72,7 @@ _non_pass_rescue() {
     bcftools norm -m -any -f genome.fa "${sample_prefix}_noChr.vcf" \
         -o "${sample_prefix}_norm.vcf"
 
-    # Create a vcf of all NON-PASS which match the OPA hotspots
+    # Create a vcf of all NON-PASS which match the rescue sites
     bcftools filter -i 'FILTER!="PASS"' "${sample_prefix}_norm.vcf"   \
         | bcftools filter -m + -s "$filter_tag" --mask-file "${rescue_vcf_name}" - \
         | bcftools filter -i 'FILTER~"$filter_tag"' - -Oz -o "${sample_prefix}.rescued.vcf.gz"
@@ -97,7 +97,7 @@ _non_pass_rescue() {
 }
 
 
-_filtered_rescue() {
+_rescue_filtered() {
     : '
     Rescues filtered out variants from a given unfiltered - filtered vcf pair
     against given VCF of variants to retain, uploads rescued VCF and exits app.
@@ -124,7 +124,7 @@ _filtered_rescue() {
 
     # 0002.vcf has variants in unfiltered vcf that are also present in rescue vcf
     # tag these as rescued, then concatenate these back to filtered vcf
-    
+
 }
 
 
@@ -178,11 +178,11 @@ main() {
 
     if [[ "$non_pass_rescue" == "True" ]]; then
         # passed gvcf to process
-        _non_pass_rescue
+        _rescue_non_pass
     fi
 
     if [[ "$rescue_filtered" == "True" ]]; then
         # rescuing variants from a filtered VCF and unfiltered vcf
-        _non_pass_rescue
+        _rescue_filtered
     fi
 }
