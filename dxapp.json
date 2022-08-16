@@ -3,16 +3,16 @@
   "title": "VCF Rescue",
   "summary": "Filter in low support variants on specified locations or recover filtered out variants",
   "properties": {
-    "githubRelease": "1.0.0"
+    "githubRelease": "1.1.0"
   },
   "dxapi": "1.0.0",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "inputSpec": [
     {
       "name": "gvcf",
       "label": "genomic vcf",
       "class": "file",
-      "optional": false,
+      "optional": true,
       "patterns": [
         "*.vcf"
       ],
@@ -76,11 +76,18 @@
       "class": "boolean",
       "optional": true,
       "help": "determines if to run as rescuing filtered out variants, must be used with filtered and unfiltered vcf inputs"
+    },
+    {
+      "name": "filter_tag",
+      "label": "filter tag",
+      "default": "rescued",
+      "class": "string",
+      "help": "tag to apply to FILTER field of rescued variants"
     }
   ],
   "outputSpec": [
     {
-      "name": "filtered_vcf",
+      "name": "output_filtered_vcf",
       "class": "file",
       "patterns": [
         "*.vcf.gz"
@@ -94,7 +101,7 @@
     "distribution" : "Ubuntu",
     "release": "20.04",
     "version": "0",
-    "file": "src/eggd_tso500_rescue.sh",
+    "file": "src/eggd_vcf_rescue.sh",
     "interpreter": "bash",
     "timeoutPolicy": {
       "*": {
