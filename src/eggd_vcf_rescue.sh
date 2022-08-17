@@ -18,27 +18,100 @@ _validate_inputs() {
     '''
     mark-section "Validating inputs"
 
-    if [[ ("$non_pass_rescue" != "True" && "$rescue_filtered" != "True") \
-        || ("$non_pass_rescue" == "True" && "$rescue_filtered" == "True") ]]; then
+    if [[ ("$non_pass_rescue" != "true" && "$rescue_filtered" != "true") \
+        || ("$non_pass_rescue" == "true" && "$rescue_filtered" == "true") ]]; then
         dx-jobutil-report-error "Error: one of --non-pass-rescue or --rescue-filtered
             are required and are not mutually exclusive. Please check inputs and re-run
-            with only one specified."
+            with only one specified as true."
         exit 1
     fi
 
-    if [[ "$non_pass_rescue" == "True" \
+    if [[ "$non_pass_rescue" == "true" \
        && ( -z $fasta_tar_name || -z $gvcf || -z $rescue_vcf ) ]]; then
         dx-jobutil-report-error "Error: non_pass_rescue specified but not all required files
             of fasta_tar, gvcf and rescue_vcf passed"
         exit 1
     fi
 
-    if [[ "$rescue_filtered" \
+    if [[ "$rescue_filtered" == "true" \
        && ( -z $filtered_vcf || -z $unfiltered_vcf || -z $rescue_vcf ) ]]; then
         dx-jobutil-report-error "Error: rescue_filtered specified but not all required files
             of filtered_vcf, unfiltered_vcf and rescue_vcf passed"
         exit 1
     fi
+}
+
+
+_decompress() {
+    : '''
+    Decompresses given vcf if compressed, else returns 0
+
+    Arguments:
+        vcf to decompress
+
+    Outputs
+        decompressed vcf file
+    '''
+    if [[ "$input_vcf" == *.gz ]]; then
+        gunzip "$input_vcf"
+    fi
+}
+
+
+_compress_and_index() {
+    : '''
+    Decompresses given vcf if already compressed, then compresses with
+    bgzip and indexes with bcftools index
+
+    Arguments:
+        - vcf to compress and index
+
+    Outputs:
+        - compressed vcf + index
+    '''
+    local input_vcf="$1"
+
+    if [[ "$input_vcf" == *.gz ]]; then
+        gunzip "$input_vcf"
+        input_vcf=${input_vcf/.gz/}
+    fi
+
+    bgzip "$input_vcf"
+    bcftools index "${input_vcf}.gz"
+}
+
+
+_get_sample_prefix() {
+    : '''
+    Gets prefix from samplename, splits on underscores and takes first field and
+    also strips .vcf.gz if no underscore present
+
+    Arguments
+        file : filename to get prefix from
+
+    Returns
+        string : file prefix to stdout
+    '''
+    sed 's/.vcf\|.gz//g' <<< "$(cut -d'_' -f1 <<< "$1")"
+}
+
+
+_strip_chr_prefix() {
+    : '''
+    Strips chr prefixes from given vcf file, will first decompress file if compressed
+
+    Arguments
+        file : vcf to strip prefixes from
+        string : name for output file
+
+    Outputs
+        decompressed vcf with chr prefixes removed
+    '''
+    local input_vcf="$1"
+    local outname="$2"
+
+    _decompress "$input_vcf"
+    awk '{gsub(/chr/,""); print}' "${input_vcf/.gz/}" > "$outname"
 }
 
 
@@ -61,19 +134,19 @@ _rescue_non_pass() {
     local sample_prefix
     sample_prefix=$(cut -d'_' -f1 <<< "$gvcf_name")
 
-    # ensure all VCFs are bgzipped and indexed
-    _compress_and_index "$gvcf_name"
-    _compress_and_index "$rescue_vcf_name"
+    # # ensure all VCFs are bgzipped and indexed
+    # _compress_and_index "$gvcf_name"
+    # _compress_and_index "$rescue_vcf_name"
 
     # set names of compressed VCFs incase they now differ to app input
-    gvcf_name="${gvcf_name/.gz/}.gz"
-    rescue_vcf_name="${rescue_vcf_name/.gz/}.gz"
+    # gvcf_name="${gvcf_name/.gz/}.gz"
+    # rescue_vcf_name="${rescue_vcf_name/.gz/}.gz"
 
     # Remove reference calls from gvcf
     bcftools view -m2 "$gvcf_name" -o "${sample_prefix}.vcf"
 
     # Remove chr prefix from sample vcf
-    awk '{gsub(/chr/,""); print}' "${sample_prefix}.vcf" > "${sample_prefix}_noChr.vcf"
+    _strip_chr_prefix "${sample_prefix}.vcf" "${sample_prefix}_noChr.vcf"
 
     # Normalise and left align filtered vcf
     bcftools norm -m -any -f genome.fa "${sample_prefix}_noChr.vcf" \
@@ -85,12 +158,13 @@ _rescue_non_pass() {
         | bcftools filter -i "FILTER~\"${filter_tag}\"" - -Oz -o "${sample_prefix}.rescued.vcf.gz"
 
     # Create a vcf with only PASS variants
-    bcftools view -f PASS "${sample_prefix}_norm.vcf"  -Oz -o "${sample_prefix}_pass.vcf.gz"
+    bcftools view -f PASS "${sample_prefix}_norm.vcf" -Oz -o "${sample_prefix}_pass.vcf.gz"
 
     # index vcf files
-    bcftools index "${sample_prefix}_pass.vcf.gz" "${sample_prefix}.rescued.vcf.gz"
+    bcftools index "${sample_prefix}_pass.vcf.gz"
+    bcftools index "${sample_prefix}.rescued.vcf.gz"
 
-    # Concatenate flagged non-pass variant vcf with pass vcf
+    # Concatenate flagged non-pass variant vcf with PASS vcf
     bcftools concat -a "${sample_prefix}_pass.vcf.gz ${sample_prefix}.rescued.vcf.gz" \
         -Oz -o "${sample_prefix}_withLowSupportHotspots.vcf.gz"
 
@@ -117,61 +191,51 @@ _rescue_filtered() {
     Outputs:
         None
     '''
+    # get prefix from splitting on underscore, strip .vcf.gz in case of no underscore
     local sample_prefix
-    sample_prefix=$(cut -d'_' -f1 <<< "$unfiltered_vcf")
+    sample_prefix=$(_get_sample_prefix "$unfiltered_vcf_name")
 
-    # ensure all VCFs are bgzipped and indexed
-    _compress_and_index "$filtered_vcf_name"
-    _compress_and_index "$unfiltered_vcf_name"
-    _compress_and_index "$rescue_vcf_name"
 
-    # set names of compressed VCFs incase they now differ to app input
-    filtered_vcf_name="${filtered_vcf_name/.gz/}.gz"
-    unfiltered_vcf_name="${filtered_vcf_name/.gz/}.gz"
-    rescue_vcf_name="${rescue_vcf_name/.gz/}.gz"
+    if [[ "$strip_chr" == 'true' ]]; then
+        # remove chr prefix from sample vcf
+        filtered_outname=$(_get_sample_prefix $filtered_vcf_name).filtered.noChr.vcf
+        unfiltered_outname=$(_get_sample_prefix $unfiltered_vcf_name).unfiltered.noChr.vcf
+        rescue_outname=$(_get_sample_prefix $rescue_vcf_name).noChr.vcf
 
-    # remove chr prefix from sample vcf
-    awk '{gsub(/chr/,""); print}' "$unfiltered_vcf_name" > "${sample_prefix}_noChr.vcf"
+        _strip_chr_prefix "$filtered_vcf_name" "$filtered_outname"
+        _strip_chr_prefix "$unfiltered_vcf_name" "$unfiltered_outname"
+        _strip_chr_prefix "$rescue_vcf_name" "$rescue_outname"
 
-    # normalise and left align filtered vcf
-    bcftools norm -m -any -f genome.fa "${sample_prefix}_noChr.vcf" \
-        -o "${sample_prefix}_norm.vcf"
+        filtered_vcf_name="$filtered_outname"
+        unfiltered_vcf_name="$unfiltered_outname"
+        rescue_vcf_name="$rescue_outname"
+    fi
+
+    # normalise and left align vcfs
+    bcftools norm -m -any -f genome.fa "${filtered_vcf_name}" \
+        -o "${sample_prefix}.filtered.norm.vcf"
+    bcftools norm -m -any -f genome.fa "${unfiltered_vcf_name}" \
+        -o "${sample_prefix}.unfiltered.norm.vcf"
+
+    filtered_vcf_name="${sample_prefix}.filtered.norm.vcf"
+    unfiltered_vcf_name="${sample_prefix}.unfiltered.norm.vcf"
+
 
     # rescue variants against given rescue vcf
-    bcftools filter -m + -s "$filter_tag" --mask-file "$rescue_vcf_name" "${sample_prefix}_norm.vcf" \
-        | bcftools filter -i "FILTER~${filter_tag}" - -Oz -o "${sample_prefix}.rescued.vcf.gz"
+    rescue_vcf="${sample_prefix}.rescued.vcf.gz"
+    bcftools filter -m + -s "$filter_tag" --mask-file "$rescue_vcf_name" "$unfiltered_vcf_name" \
+        | bcftools filter -i "FILTER~\"${filter_tag}\"" - -Oz -o "$rescue_vcf"
 
-    # combine unfiltered vcf with rescued variants to output
-    outname=$(sed 's/.vcf\|.gz//g' <<< "$filtered_vcf_name").vcf.gz
-    bcftools concat -a -d all "$filtered_vcf_name" "${sample_prefix}.rescued.vcf.gz" -Oz -o "$outname"
+    _compress_and_index "$filtered_vcf_name"
+    _compress_and_index "$rescue_vcf"
+
+    # combine filtered vcf with rescued variants to output
+    outname="${sample_prefix}.vcf.gz"
+    bcftools concat -a -d all "${filtered_vcf_name}.gz" "$rescue_vcf" -Oz -o "$outname"
 
     # Upload output vcf
     output_vcf=$(dx upload "$outname" --brief)
     dx-jobutil-add-output output_vcf "$output_vcf" --class=file
-
-}
-
-
-_compress_and_index() {
-    : '''
-    Decompresses given vcf if already compressed, then compresses with
-    bgzip and indexes with bcftools index
-
-    Arguments:
-        - vcf to compress and index
-
-    Outputs:
-        - compressed vcf + index
-    '''
-    input_vcf="$1"
-
-    if [[ "$input_vcf" == *.gz ]]; then
-        gunzip "$input_vcf"
-        input_vcf=${input_vcf/.gz/}
-    fi
-
-    bgzip "$input_vcf"
-    bcftools index "${input_vcf}.gz"
 }
 
 
@@ -189,23 +253,20 @@ main() {
     _validate_inputs
 
     mark-section "Downloading inputs"
-
-    # build string of given files and download
-    input_files=$(tr -s '[:space:]' <<< "${gvcf} ${filtered_vcf} ${unfiltered_vcf} ${rescue_vcf} ${fasta_tar_name}")
-    xargs -P 4 -n1 dx download <<< "$input_files"
+    dx-download-all-inputs --parallel
+    find ~/in/ -type f -name "*" -print0 | xargs -0 -I {} mv {} /home/dnanexus
 
     # Unpack fasta tar if given
-    if [[ -z $fasta_tar_name ]]; then tar xzf "$fasta_tar_name"; fi
-
+    if [[ $fasta_tar_name ]]; then time tar -I pigz -xf "$fasta_tar_name"; fi
 
     mark-section "Rescuing variants"
 
-    if [[ "$non_pass_rescue" == "True" ]]; then
+    if [[ "$non_pass_rescue" == "true" ]]; then
         # passed gvcf to process
         _rescue_non_pass
     fi
 
-    if [[ "$rescue_filtered" == "True" ]]; then
+    if [[ "$rescue_filtered" == "true" ]]; then
         # rescuing variants from a filtered VCF and unfiltered vcf
         _rescue_filtered
     fi
