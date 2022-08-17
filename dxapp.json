@@ -17,7 +17,7 @@
       "patterns": [
         "*.vcf"
       ],
-      "help": "Input genomic vcf"
+      "help": "Input genomic vcf - to be used with rescue_non_pass mode"
     },
     {
       "name": "filtered_vcf",
@@ -29,7 +29,7 @@
         "*.vcf",
         "*.vcf.gz"
       ],
-      "help": ""
+      "help": "vcf of filtered variants - to be used with rescue_filtered mode"
     },
     {
       "name": "unfiltered_vcf",
@@ -41,7 +41,7 @@
         "*.vcf",
         "*.vcf.gz"
       ],
-      "help": ""
+      "help": "vcf of unfiltered variants - to be used with rescue_filtered mode"
     },
     {
       "name": "rescue_vcf",
@@ -51,7 +51,7 @@
       "patterns": [
         "*vcf.gz"
       ],
-      "help": "Compressed rescue vcf"
+      "help": "vcf of variants to rescue from given input vcf"
     },
     {
       "name": "fasta_tar",
