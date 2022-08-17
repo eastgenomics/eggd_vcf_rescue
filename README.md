@@ -3,19 +3,40 @@
 -----------------------------------------
 ## What does this app do?
 
-It takes the genomic vcf which is outputed by the TSO500 local app v2.2 and filters out the reference calls and low support variants but keeps low support variants that are present in a given rescue list.
+Rescues variants against a given vcf of positions. This app may be run in 2 modes:
+
+- `rescue_filtered`: When run in this mode an unfiltered and filtered vcf must be provided, variants will be rescued from the unfiltered vcf and concatenated with the filtered vcf.
+- `rescue_non_pass`: When run in this mode a gvcf must be provided, PASS and non-PASS variants will be extracted from the gvcf (with reference calls removed), and variant positions present in the given `rescue_vcf` rescued against the non-PASS variants.
+
 
 ## What are typical use cases for this app
-During the validation of the TSO500 local app v2.2 analysis pipeline, some known variants were excluded during filtering. This app attempts to rescue in filtered out variants if they are a known variant of interest given a rescue list of variants.
+To rescue variants filtered out or of low quality against positions to never exclude (i.e. mutation hotspots, known pathogenic variants etc.)
+
 
 ## What data are required for this app to run?
-Required inputs for this app:
-* a genomic gvcf (*.genome.vcf)
-* a compressed rescue vcf containing variants needed to always be filtered in (*.vcf.gz)
+Files:
+
+    - `rescue_vcf`: vcf of known sites to resuce against
+    - `gvcf` (`rescue_non_pass` mode): gvcf to extract PASS variants and rescue non-PASS variants from
+    - `filtered_vcf` (`rescue_filtered` mode): vcf of filtered variants to concatenate rescued variants with
+    - `unfiltered_vcf` (`rescue_filtered` mode): vcf of unfiltered sites to rescue variants from
+    - `fasta_tar`: tar of reference fasta and index
+
+Modes:
+
+    - `rescue_filtered` (`bool`): when run in this mode an unfiltered and filtered vcf must be provided, variants will be rescued from the unfiltered vcf and concatenated with the filtered vcf. Mutually exclusive with `rescue_non_pass`.
+    - `rescue_non_pass` (`bool`): when run in this mode a gvcf must be provided, PASS and non-PASS variants will be extracted from the gvcf, and rescued against the non-PASS variants. Mutually exclusive with `rescue_filtered`.
+
+Optional:
+
+    - `strip_chr` (`bool`): if true, will strip chr prefixes from iput vcfs. Should be specified if given reference fasta does not contain chr prefixes.
+    - `filter_tag` (`string`): tag to add to FILTER field of rescued variants (default: `rescued`)
+
 
 ## What does this app output?
-This app outputs:
-* a vcf file with all PASS variants in addition to filtered in low quality variants given a rescue list of variants provided.
+
+- rescue_non_pass mode: a vcf file with all PASS variants in addition to filtered in low quality variants given a rescue list of variants provided.
+- rescue_filtered mode: a vcf of variants from the given `filtered_vcf` combined with variants rescued from `unfiltered_vcf`.
 
 This is the source code for an app that runs on the DNAnexus Platform.
 For more information about how to run or modify it, see
