@@ -1,5 +1,5 @@
 <!-- dx-header -->
-# eggd_tso500_rescue (DNAnexus Platform App)
+# eggd_vcf_rescue (DNAnexus Platform App)
 -----------------------------------------
 ## What does this app do?
 
