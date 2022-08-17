@@ -7,6 +7,13 @@ _validate_inputs() {
     Check given input files to ensure correct ones passed for non pass
     recuing or rescuing filtered variants
 
+    Globals
+        rescue_non_pass : boolean to run in non_pass rescue mode
+        rescue_filtered : boolean to run in rescue filter mode
+        gvcf : given gVCF to rescue non-PASS variants from
+        filtered_vcf : vcf of filtered variants to append to for output vcf
+        unfiltered_vcf : vcf of unfiltered variants used to rescue from
+
     Arguments:
         None
 
@@ -26,15 +33,13 @@ _validate_inputs() {
         exit 1
     fi
 
-    if [[ "$rescue_non_pass" == "true" \
-       && ( -z $fasta_tar_name || -z $gvcf || -z $rescue_vcf ) ]]; then
+    if [[ "$rescue_non_pass" == "true" && -z $gvcf ]]; then
         dx-jobutil-report-error "Error: rescue_non_pass specified but not all required files
             of fasta_tar, gvcf and rescue_vcf passed"
         exit 1
     fi
 
-    if [[ "$rescue_filtered" == "true" \
-       && ( -z $filtered_vcf || -z $unfiltered_vcf || -z $rescue_vcf ) ]]; then
+    if [[ "$rescue_filtered" == "true" && ( -z $filtered_vcf || -z $unfiltered_vcf) ]]; then
         dx-jobutil-report-error "Error: rescue_filtered specified but not all required files
             of filtered_vcf, unfiltered_vcf and rescue_vcf passed"
         exit 1
@@ -47,10 +52,10 @@ _decompress() {
     Decompresses given vcf if compressed, else returns 0
 
     Arguments:
-        vcf to decompress
+        file : vcf to decompress
 
     Outputs
-        decompressed vcf file
+        file : decompressed vcf file
     '''
     if [[ "$input_vcf" == *.gz ]]; then
         pigz -d "$input_vcf"
@@ -64,10 +69,10 @@ _compress_and_index() {
     bgzip and indexes with bcftools index
 
     Arguments:
-        - vcf to compress and index
+        file : vcf to compress and index
 
     Outputs:
-        - compressed vcf + index
+        files : compressed vcf + index
     '''
     local input_vcf="$1"
 
@@ -81,8 +86,8 @@ _compress_and_index() {
 
 _get_sample_prefix() {
     : '''
-    Gets prefix from samplename, splits on underscores and takes first field and
-    also strips .vcf.gz if no underscore present
+    Gets prefix from samplename, splits on underscores and takes first field.
+    Will fall back to just stripping .vcf.gz if no underscore present.
 
     Arguments
         file : filename to get prefix from
@@ -121,6 +126,7 @@ _rescue_non_pass() {
 
     Globals:
         gvcf: given gVCF to rescue non-PASS variants from
+        rescue_vcf : vcf of known variants to rescue against
         filter_tag: tag to apply to FILTER field of rescued variants
 
     Arguments:
@@ -172,11 +178,11 @@ _rescue_non_pass() {
 _rescue_filtered() {
     : '''
     Rescues filtered out variants from a given unfiltered - filtered vcf pair
-    against given VCF of variants to retain, uploads rescued VCF and exits app.
+    against given VCF of variants to rescued, uploads concatenated VCF and exits app.
 
     Globals:
         filtered_vcf : vcf of filtered variants to append to for output vcf
-        unfiltered_vcf : vcf unfiltered variants used to rescue from
+        unfiltered_vcf : vcf of unfiltered variants used to rescue from
         rescue_vcf : vcf of known variants to rescue against
         filter_tag : tag to apply to FILTER field of rescued variants
 
@@ -191,15 +197,16 @@ _rescue_filtered() {
     sample_prefix=$(_get_sample_prefix "$unfiltered_vcf_name")
 
     if [[ "$strip_chr" == 'true' ]]; then
-        # remove chr prefix from sample vcf
         filtered_outname=$(_get_sample_prefix $filtered_vcf_name).filtered.noChr.vcf
         unfiltered_outname=$(_get_sample_prefix $unfiltered_vcf_name).unfiltered.noChr.vcf
-        rescue_outname=$(_get_sample_prefix $rescue_vcf_name).noChr.vcf
+        rescue_outname=$(_get_sample_prefix $rescue_vcf_name).rescue.noChr.vcf
 
+        # remove chr prefix from sample vcf
         _strip_chr_prefix "$filtered_vcf_name" "$filtered_outname"
         _strip_chr_prefix "$unfiltered_vcf_name" "$unfiltered_outname"
         _strip_chr_prefix "$rescue_vcf_name" "$rescue_outname"
 
+        # overwrite global variables for convenience to point to new files
         filtered_vcf_name="$filtered_outname"
         unfiltered_vcf_name="$unfiltered_outname"
         rescue_vcf_name="$rescue_outname"
@@ -223,6 +230,7 @@ _rescue_filtered() {
     # sense check for logs how many variants were rescued
     echo "Total variants rescued: $(zgrep -v '^#' $rescue_vcf | wc -l)"
 
+    # compress and index for bcftools concat
     _compress_and_index "$filtered_vcf_name"
     _compress_and_index "$rescue_vcf"
 
