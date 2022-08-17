@@ -12,23 +12,23 @@ _validate_inputs() {
 
     Returns:
         0 if inputs all valid, 1 if:
-            - non_pass_rescue and rescue_filtered booleans both specified
-            - required files for non_pass_rescue mode not provided
+            - rescue_non_pass and rescue_filtered booleans both specified
+            - required files for rescue_non_pass mode not provided
             - required files for resuce_filtered mode not provided
     '''
     mark-section "Validating inputs"
 
-    if [[ ("$non_pass_rescue" != "true" && "$rescue_filtered" != "true") \
-        || ("$non_pass_rescue" == "true" && "$rescue_filtered" == "true") ]]; then
+    if [[ ("$rescue_non_pass" != "true" && "$rescue_filtered" != "true") \
+        || ("$rescue_non_pass" == "true" && "$rescue_filtered" == "true") ]]; then
         dx-jobutil-report-error "Error: one of --non-pass-rescue or --rescue-filtered
             are required and are not mutually exclusive. Please check inputs and re-run
             with only one specified as true."
         exit 1
     fi
 
-    if [[ "$non_pass_rescue" == "true" \
+    if [[ "$rescue_non_pass" == "true" \
        && ( -z $fasta_tar_name || -z $gvcf || -z $rescue_vcf ) ]]; then
-        dx-jobutil-report-error "Error: non_pass_rescue specified but not all required files
+        dx-jobutil-report-error "Error: rescue_non_pass specified but not all required files
             of fasta_tar, gvcf and rescue_vcf passed"
         exit 1
     fi
@@ -71,10 +71,8 @@ _compress_and_index() {
     '''
     local input_vcf="$1"
 
-    if [[ "$input_vcf" == *.gz ]]; then
-        pigz "$input_vcf"
-        input_vcf=${input_vcf/.gz/}
-    fi
+    _decompress "$input_vcf"
+    input_vcf=${input_vcf/.gz/}
 
     bgzip "$input_vcf"
     bcftools index "${input_vcf}.gz"
@@ -245,7 +243,7 @@ main() {
     echo "Value of unfiltered_vcf: '$unfiltered_vcf'"
     echo "Value of rescue_vcf: '$rescue_vcf'"
     echo "Value of fasta tar: '$fasta_tar_name'"
-    echo "Value of boolean non_pass_rescue: '$non_pass_rescue'"
+    echo "Value of boolean rescue_non_pass: '$rescue_non_pass'"
     echo "Value of boolean rescue_filtered: '$rescue_filtered"
     echo "Value of FILTER tag: '$filter_tag'"
 
