@@ -1,37 +1,64 @@
 {
-  "name": "eggd_tso500_rescue",
-  "title": "TSO500 Rescue",
-  "summary": "Filter in low support variants on specified locations",
+  "name": "eggd_vcf_rescue",
+  "title": "VCF Rescue",
+  "summary": "Filter in low support variants on specified locations or recover filtered out variants",
   "properties": {
-    "githubRelease": "1.0.0"
+    "githubRelease": "1.1.0"
   },
   "dxapi": "1.0.0",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "inputSpec": [
     {
       "name": "gvcf",
       "label": "genomic vcf",
       "class": "file",
-      "optional": false,
+      "optional": true,
+      "group": "files",
       "patterns": [
         "*.vcf"
       ],
-      "help": "Input genomic vcf"
+      "help": "Input genomic vcf - to be used with rescue_non_pass mode"
     },
     {
-      "name": "hotspot_vcf",
+      "name": "filtered_vcf",
+      "label": "Filtered VCF",
+      "class": "file",
+      "optional": true,
+      "group": "files",
+      "patterns": [
+        "*.vcf",
+        "*.vcf.gz"
+      ],
+      "help": "vcf of filtered variants - to be used with rescue_filtered mode"
+    },
+    {
+      "name": "unfiltered_vcf",
+      "label": "Unfiltered VCF",
+      "class": "file",
+      "optional": true,
+      "group": "files",
+      "patterns": [
+        "*.vcf",
+        "*.vcf.gz"
+      ],
+      "help": "vcf of unfiltered variants - to be used with rescue_filtered mode"
+    },
+    {
+      "name": "rescue_vcf",
       "class": "file",
       "optional": false,
+      "group": "files",
       "patterns": [
         "*vcf.gz"
       ],
-      "help": "Compressed rescue vcf"
+      "help": "vcf of variants to rescue from given input vcf"
     },
     {
       "name": "fasta_tar",
       "label": "Reference genome fasta and index",
       "class": "file",
       "optional": false,
+      "group": "files",
       "patterns": ["*.fasta-index.tar.gz"],
       "help": "tar.gz containing genome.fa and genome.fa.fai. Must match reference genome build used.",
       "default":{
@@ -40,11 +67,43 @@
             "id": "file-F3zxG0Q4fXX9YFjP1v5jK9jf"
           }
         }
+    },
+    {
+      "name": "rescue_non_pass",
+      "label": "non pass rescue",
+      "class": "boolean",
+      "optional": true,
+      "group": "mode",
+      "help": "determines if to run as non-pass rescue, must be used with gvcf input"
+    },
+    {
+      "name": "rescue_filtered",
+      "label": "rescue filtered",
+      "class": "boolean",
+      "optional": true,
+      "group": "mode",
+      "help": "determines if to run as rescuing filtered out variants, must be used with filtered and unfiltered vcf inputs"
+    },
+    {
+      "name": "strip_chr",
+      "label": "strip chr prefix",
+      "class": "boolean",
+      "optional": true,
+      "group": "optional",
+      "help": "determines if to strip chr prefix from input vcfs, should be determined by presence of chr prefixes in reference fasta"
+    },
+    {
+      "name": "filter_tag",
+      "label": "filter tag",
+      "class": "string",
+      "default": "rescued",
+      "group": "optional",
+      "help": "tag to apply to FILTER field of rescued variants"
     }
   ],
   "outputSpec": [
     {
-      "name": "filtered_vcf",
+      "name": "output_vcf",
       "class": "file",
       "patterns": [
         "*.vcf.gz"
@@ -58,7 +117,7 @@
     "distribution" : "Ubuntu",
     "release": "20.04",
     "version": "0",
-    "file": "src/eggd_tso500_rescue.sh",
+    "file": "src/eggd_vcf_rescue.sh",
     "interpreter": "bash",
     "timeoutPolicy": {
       "*": {
