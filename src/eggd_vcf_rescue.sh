@@ -53,7 +53,7 @@ _decompress() {
         decompressed vcf file
     '''
     if [[ "$input_vcf" == *.gz ]]; then
-        gunzip "$input_vcf"
+        pigz -d "$input_vcf"
     fi
 }
 
@@ -72,7 +72,7 @@ _compress_and_index() {
     local input_vcf="$1"
 
     if [[ "$input_vcf" == *.gz ]]; then
-        gunzip "$input_vcf"
+        pigz "$input_vcf"
         input_vcf=${input_vcf/.gz/}
     fi
 
@@ -132,30 +132,27 @@ _rescue_non_pass() {
         None
     '''
     local sample_prefix
-    sample_prefix=$(cut -d'_' -f1 <<< "$gvcf_name")
-
-    # # ensure all VCFs are bgzipped and indexed
-    # _compress_and_index "$gvcf_name"
-    # _compress_and_index "$rescue_vcf_name"
-
-    # set names of compressed VCFs incase they now differ to app input
-    # gvcf_name="${gvcf_name/.gz/}.gz"
-    # rescue_vcf_name="${rescue_vcf_name/.gz/}.gz"
+    sample_prefix=$(_get_sample_prefix "$gvcf_name")
 
     # Remove reference calls from gvcf
     bcftools view -m2 "$gvcf_name" -o "${sample_prefix}.vcf"
 
-    # Remove chr prefix from sample vcf
-    _strip_chr_prefix "${sample_prefix}.vcf" "${sample_prefix}_noChr.vcf"
+    if [[ "$strip_chr" == 'true' ]]; then
+        # remove chr prefix from sample vcf
+        _strip_chr_prefix "${sample_prefix}.vcf" "${sample_prefix}.tmp.vcf"
+        mv "${sample_prefix}.tmp.vcf" "${sample_prefix}.vcf"
+    fi
 
     # Normalise and left align filtered vcf
-    bcftools norm -m -any -f genome.fa "${sample_prefix}_noChr.vcf" \
-        -o "${sample_prefix}_norm.vcf"
+    bcftools norm -m -any -f genome.fa "${sample_prefix}.vcf" -o "${sample_prefix}_norm.vcf"
 
     # Create a vcf of all NON-PASS which match the rescue sites
     bcftools filter -i 'FILTER!="PASS"' "${sample_prefix}_norm.vcf"   \
         | bcftools filter -m + -s "$filter_tag" --mask-file "${rescue_vcf_name}" - \
         | bcftools filter -i "FILTER~\"${filter_tag}\"" - -Oz -o "${sample_prefix}.rescued.vcf.gz"
+
+    # sense check for logs how many variants were rescued
+    echo "Total variants rescued: $(zgrep -v '^#' ${sample_prefix}.rescued.vcf.gz | wc -l)"
 
     # Create a vcf with only PASS variants
     bcftools view -f PASS "${sample_prefix}_norm.vcf" -Oz -o "${sample_prefix}_pass.vcf.gz"
@@ -165,7 +162,7 @@ _rescue_non_pass() {
     bcftools index "${sample_prefix}.rescued.vcf.gz"
 
     # Concatenate flagged non-pass variant vcf with PASS vcf
-    bcftools concat -a "${sample_prefix}_pass.vcf.gz ${sample_prefix}.rescued.vcf.gz" \
+    bcftools concat -a "${sample_prefix}_pass.vcf.gz" "${sample_prefix}.rescued.vcf.gz" \
         -Oz -o "${sample_prefix}_withLowSupportHotspots.vcf.gz"
 
     # Upload output vcf
@@ -194,7 +191,6 @@ _rescue_filtered() {
     # get prefix from splitting on underscore, strip .vcf.gz in case of no underscore
     local sample_prefix
     sample_prefix=$(_get_sample_prefix "$unfiltered_vcf_name")
-
 
     if [[ "$strip_chr" == 'true' ]]; then
         # remove chr prefix from sample vcf
@@ -226,6 +222,9 @@ _rescue_filtered() {
     bcftools filter -m + -s "$filter_tag" --mask-file "$rescue_vcf_name" "$unfiltered_vcf_name" \
         | bcftools filter -i "FILTER~\"${filter_tag}\"" - -Oz -o "$rescue_vcf"
 
+    # sense check for logs how many variants were rescued
+    echo "Total variants rescued: $(zgrep -v '^#' $rescue_vcf | wc -l)"
+
     _compress_and_index "$filtered_vcf_name"
     _compress_and_index "$rescue_vcf"
 
@@ -255,13 +254,11 @@ main() {
     mark-section "Downloading inputs"
     dx-download-all-inputs --parallel
     find ~/in/ -type f -name "*" -print0 | xargs -0 -I {} mv {} /home/dnanexus
-
-    # Unpack fasta tar if given
-    if [[ $fasta_tar_name ]]; then time tar -I pigz -xf "$fasta_tar_name"; fi
+    tar -I pigz -xf "$fasta_tar_name"
 
     mark-section "Rescuing variants"
 
-    if [[ "$non_pass_rescue" == "true" ]]; then
+    if [[ "$rescue_non_pass" == "true" ]]; then
         # passed gvcf to process
         _rescue_non_pass
     fi
