@@ -78,16 +78,23 @@
       "help": "determines if to run as rescuing filtered out variants, must be used with filtered and unfiltered vcf inputs"
     },
     {
+      "name": "strip_chr",
+      "label": "strip chr prefix",
+      "class": "boolean",
+      "optional": true,
+      "help": "determines if to strip chr prefix from input vcfs, should be determined by presence of chr prefixes in reference fasta"
+    },
+    {
       "name": "filter_tag",
       "label": "filter tag",
-      "default": "rescued",
       "class": "string",
+      "default": "rescued",
       "help": "tag to apply to FILTER field of rescued variants"
     }
   ],
   "outputSpec": [
     {
-      "name": "output_filtered_vcf",
+      "name": "output_vcf",
       "class": "file",
       "patterns": [
         "*.vcf.gz"
