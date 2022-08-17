@@ -16,7 +16,7 @@ To rescue variants filtered out or of low quality against positions to never exc
 
 
 ## What data are required for this app to run?
-Files:
+**Files**:
 
 - `rescue_vcf`: vcf of known sites to resuce against
 - `gvcf` (`rescue_non_pass` mode): gvcf to extract PASS variants and rescue non-PASS variants from
@@ -24,12 +24,12 @@ Files:
 - `unfiltered_vcf` (`rescue_filtered` mode): vcf of unfiltered sites to rescue variants from
 - `fasta_tar`: tar of reference fasta and index
 
-Modes:
+**Modes**:
 
 - `rescue_filtered` (`bool`): when run in this mode an unfiltered and filtered vcf must be provided, variants will be rescued from the unfiltered vcf and concatenated with the filtered vcf. Mutually exclusive with `rescue_non_pass`.
 - `rescue_non_pass` (`bool`): when run in this mode a gvcf must be provided, PASS and non-PASS variants will be extracted from the gvcf, and rescued against the non-PASS variants. Mutually exclusive with `rescue_filtered`.
 
-Optional:
+**Optional**:
 
 - `strip_chr` (`bool`): if true, will strip chr prefixes from iput vcfs. Should be specified if given reference fasta does not contain chr prefixes.
 - `filter_tag` (`string`): tag to add to FILTER field of rescued variants (default: `rescued`)
