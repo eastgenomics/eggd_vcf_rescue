@@ -13,6 +13,7 @@
       "label": "genomic vcf",
       "class": "file",
       "optional": true,
+      "group": "files",
       "patterns": [
         "*.vcf"
       ],
@@ -23,6 +24,7 @@
       "label": "Filtered VCF",
       "class": "file",
       "optional": true,
+      "group": "files",
       "patterns": [
         "*.vcf",
         "*.vcf.gz"
@@ -34,6 +36,7 @@
       "label": "Unfiltered VCF",
       "class": "file",
       "optional": true,
+      "group": "files",
       "patterns": [
         "*.vcf",
         "*.vcf.gz"
@@ -44,6 +47,7 @@
       "name": "rescue_vcf",
       "class": "file",
       "optional": false,
+      "group": "files",
       "patterns": [
         "*vcf.gz"
       ],
@@ -54,6 +58,7 @@
       "label": "Reference genome fasta and index",
       "class": "file",
       "optional": false,
+      "group": "files",
       "patterns": ["*.fasta-index.tar.gz"],
       "help": "tar.gz containing genome.fa and genome.fa.fai. Must match reference genome build used.",
       "default":{
@@ -64,10 +69,11 @@
         }
     },
     {
-      "name": "non_pass_rescue",
+      "name": "rescue_non_pass",
       "label": "non pass rescue",
       "class": "boolean",
       "optional": true,
+      "group": "mode",
       "help": "determines if to run as non-pass rescue, must be used with gvcf input"
     },
     {
@@ -75,6 +81,7 @@
       "label": "rescue filtered",
       "class": "boolean",
       "optional": true,
+      "group": "mode",
       "help": "determines if to run as rescuing filtered out variants, must be used with filtered and unfiltered vcf inputs"
     },
     {
@@ -82,6 +89,7 @@
       "label": "strip chr prefix",
       "class": "boolean",
       "optional": true,
+      "group": "optional",
       "help": "determines if to strip chr prefix from input vcfs, should be determined by presence of chr prefixes in reference fasta"
     },
     {
@@ -89,6 +97,7 @@
       "label": "filter tag",
       "class": "string",
       "default": "rescued",
+      "group": "optional",
       "help": "tag to apply to FILTER field of rescued variants"
     }
   ],
