@@ -87,7 +87,7 @@ _compress_and_index() {
 _modify_header() {
     : '''
     Modifies vcf header after calling bcftools filter to update FILTER description
-    added for the given filter_tag to link to current DNAnexusjob
+    added for the given filter_tag to link to current DNAnexus job
 
     Arguments:
         file : vcf file with applied filter_tag
@@ -104,7 +104,11 @@ _modify_header() {
     header_line=$(grep "^##FILTER=<ID=${filter_tag}" header.txt)
     description_addition="variants rescued against given variant positions "
     description_addition+="in eggd_vcf_rescue (DNAnexus job: $DX_JOB_ID)"
-    if [[ -z "$filter_tag_description" ]]; then description_addition+=". ${filter_tag_description}"; fi
+    if [[ "$filter_tag_description" ]]; then
+        # add additional description if given, replace double with single quotes
+        # if given to not break the header
+        description_addition+=". ${filter_tag_description/\"/\'}"
+    fi
 
     modified_header_line=${header_line/\">/; $description_addition\">}
     sed -i "s/$header_line/$modified_header_line/" header.txt
@@ -191,7 +195,7 @@ _rescue_non_pass() {
 
     # modified description for FILTER field added by bcftools filter to better explain
     # provenance of filter_tag
-    _modify_header ${sample_prefix}.rescued.vcf.gz
+    _modify_header "${sample_prefix}.rescued.vcf.gz"
 
     # Create a vcf with only PASS variants
     bcftools view -f PASS "${sample_prefix}_norm.vcf" -Oz -o "${sample_prefix}_pass.vcf.gz"
