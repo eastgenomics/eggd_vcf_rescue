@@ -5,7 +5,9 @@ set -exo pipefail
 _validate_inputs() {
     : '''
     Check given input files to ensure correct ones passed for non pass
-    recuing or rescuing filtered variants
+    recuing or rescuing filtered variants. Also ensures no invalid characters
+    are present in filter_tag and filter_tag_description to be written to
+    vcf header.
 
     Globals
         rescue_non_pass : boolean to run in non_pass rescue mode
@@ -24,6 +26,14 @@ _validate_inputs() {
             - required files for resuce_filtered mode not provided
     '''
     mark-section "Validating inputs"
+
+    if [[ $filter_tag ]]; then
+        filter_tag=$(sed  -e 's/[ ;:=\]/_/g' -e "s/[\'\"]//g"  <<< "$filter_tag")
+    fi
+
+    if [[ $filter_tag_description ]]; then
+        filter_tag_description=${filter_tag_description//\"/\'}
+    fi
 
     if [[ ("$rescue_non_pass" != "true" && "$rescue_filtered" != "true") \
         || ("$rescue_non_pass" == "true" && "$rescue_filtered" == "true") ]]; then
@@ -104,11 +114,7 @@ _modify_header() {
     header_line=$(grep "^##FILTER=<ID=${filter_tag}" header.txt)
     description_addition="variants rescued against given variant positions "
     description_addition+="in eggd_vcf_rescue (DNAnexus job: $DX_JOB_ID)"
-    if [[ "$filter_tag_description" ]]; then
-        # add additional description if given, replace double with single quotes
-        # if given to not break the header
-        description_addition+=". ${filter_tag_description/\"/\'}"
-    fi
+    if [[ "$filter_tag_description" ]]; then description_addition+=". ${filter_tag_description}"; fi
 
     modified_header_line=${header_line/\">/; $description_addition\">}
     sed -i "s/$header_line/$modified_header_line/" header.txt
