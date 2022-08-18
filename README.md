@@ -33,7 +33,7 @@ To rescue variants filtered out, or of low quality, against positions to never e
 **Optional**:
 
 - `strip_chr` (`bool`): if true, will strip chr prefixes from input vcfs. Should be specified if given reference fasta does not contain chr prefixes.
-- `filter_tag` (`string`): tag to add to `FILTER` field of rescued variants (default: `rescued`)
+- `filter_tag` (`string`): tag to add to `FILTER` field of rescued variants (default: `rescued`), this will be appended to any existing FILTER fields (`bcftools filter -m +`).
 
 
 ## What does this app output?
