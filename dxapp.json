@@ -99,6 +99,14 @@
       "default": "rescued",
       "group": "optional",
       "help": "tag to apply to FILTER field of rescued variants"
+    },
+    {
+      "name": "filter_tag_description",
+      "label": "filter tag description",
+      "class": "string",
+      "optional": true,
+      "group": "optional",
+      "help": "extra description to append to FILTER field in vcf header for given filter_tag"
     }
   ],
   "outputSpec": [

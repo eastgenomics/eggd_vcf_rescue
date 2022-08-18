@@ -84,6 +84,37 @@ _compress_and_index() {
 }
 
 
+_modify_header() {
+    : '''
+    Modifies vcf header after calling bcftools filter to update FILTER description
+    added for the given filter_tag to link to current DNAnexusjob
+
+    Arguments:
+        file : vcf file with applied filter_tag
+
+    Outputs:
+        file : vcf file with modified header
+    '''
+    local vcf="$1"
+
+    # get header from vcf
+    bcftools view -h "$vcf" > header.txt
+
+    # find ##FILTER line in header added by bcftools filter, add to description
+    header_line=$(grep "^##FILTER=<ID=${filter_tag}" header.txt)
+    description_addition="variants rescued against given variant positions "
+    description_addition+="in eggd_vcf_rescue (DNAnexus job: $DX_JOB_ID)"
+    if [[ -z "$filter_tag_description" ]]; then description_addition+=". ${filter_tag_description}"; fi
+
+    modified_header_line=${header_line/\">/; $description_addition\">}
+    sed -i "s/$header_line/$modified_header_line/" header.txt
+
+    # write updated header back to the file
+    bcftools reheader -h header.txt -o "tmp.vcf.gz" "$vcf"
+    mv "tmp.vcf.gz" "$vcf"
+}
+
+
 _get_sample_prefix() {
     : '''
     Gets prefix from samplename, splits on underscores and takes first field.
@@ -158,6 +189,10 @@ _rescue_non_pass() {
     # sense check for logs how many variants were rescued
     echo "Total variants rescued: $(zgrep -v '^#' ${sample_prefix}.rescued.vcf.gz | wc -l)"
 
+    # modified description for FILTER field added by bcftools filter to better explain
+    # provenance of filter_tag
+    _modify_header ${sample_prefix}.rescued.vcf.gz
+
     # Create a vcf with only PASS variants
     bcftools view -f PASS "${sample_prefix}_norm.vcf" -Oz -o "${sample_prefix}_pass.vcf.gz"
 
@@ -226,6 +261,10 @@ _rescue_filtered() {
     rescue_vcf="${sample_prefix}.rescued.vcf.gz"
     bcftools filter -m + -s "$filter_tag" --mask-file "$rescue_vcf_name" "$unfiltered_vcf_name" \
         | bcftools filter -i "FILTER~\"${filter_tag}\"" - -Oz -o "$rescue_vcf"
+
+    # modified description for FILTER field added by bcftools filter to better explain
+    # provenance of filter_tag
+    _modify_header "$rescue_vcf"
 
     # sense check for logs how many variants were rescued
     echo "Total variants rescued: $(zgrep -v '^#' $rescue_vcf | wc -l)"
