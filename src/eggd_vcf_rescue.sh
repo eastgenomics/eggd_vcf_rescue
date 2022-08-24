@@ -183,9 +183,13 @@ _rescue_non_pass() {
     bcftools view -m2 "$gvcf_name" -o "${sample_prefix}.vcf"
 
     if [[ "$strip_chr" == 'true' ]]; then
-        # remove chr prefix from sample vcf
+        # remove chr prefix from sample vcf and rescue vcf
         _strip_chr_prefix "${sample_prefix}.vcf" "${sample_prefix}.tmp.vcf"
         mv "${sample_prefix}.tmp.vcf" "${sample_prefix}.vcf"
+
+        _strip_chr_prefix "$rescue_vcf_name" "tmp.vcf"
+        mv tmp.vcf "${rescue_vcf_name/.gz/}"
+        rescue_vcf_name="${rescue_vcf_name/.gz/}"  # overwrite global variable to new file
     fi
 
     # Normalise and left align filtered vcf
