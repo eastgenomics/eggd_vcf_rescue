@@ -5,7 +5,9 @@ set -exo pipefail
 _validate_inputs() {
     : '''
     Check given input files to ensure correct ones passed for non pass
-    recuing or rescuing filtered variants
+    recuing or rescuing filtered variants. Also ensures no invalid characters
+    are present in filter_tag and filter_tag_description to be written to
+    vcf header.
 
     Globals
         rescue_non_pass : boolean to run in non_pass rescue mode
@@ -24,6 +26,14 @@ _validate_inputs() {
             - required files for resuce_filtered mode not provided
     '''
     mark-section "Validating inputs"
+
+    if [[ $filter_tag ]]; then
+        filter_tag=$(sed  -e 's/[ ;:=\]/_/g' -e "s/[\'\"]//g"  <<< "$filter_tag")
+    fi
+
+    if [[ $filter_tag_description ]]; then
+        filter_tag_description=${filter_tag_description//\"/\'}
+    fi
 
     if [[ ("$rescue_non_pass" != "true" && "$rescue_filtered" != "true") \
         || ("$rescue_non_pass" == "true" && "$rescue_filtered" == "true") ]]; then
@@ -81,6 +91,37 @@ _compress_and_index() {
 
     bgzip "$input_vcf"
     bcftools index "${input_vcf}.gz"
+}
+
+
+_modify_header() {
+    : '''
+    Modifies vcf header after calling bcftools filter to update FILTER description
+    added for the given filter_tag to link to current DNAnexus job
+
+    Arguments:
+        file : vcf file with applied filter_tag
+
+    Outputs:
+        file : vcf file with modified header
+    '''
+    local vcf="$1"
+
+    # get header from vcf
+    bcftools view -h "$vcf" > header.txt
+
+    # find ##FILTER line in header added by bcftools filter, add to description
+    header_line=$(grep "^##FILTER=<ID=${filter_tag}" header.txt)
+    description_addition="variants rescued against given variant positions "
+    description_addition+="in eggd_vcf_rescue (DNAnexus job: $DX_JOB_ID)"
+    if [[ "$filter_tag_description" ]]; then description_addition+=". ${filter_tag_description}"; fi
+
+    modified_header_line=${header_line/\">/; $description_addition\">}
+    sed -i "s/$header_line/$modified_header_line/" header.txt
+
+    # write updated header back to the file
+    bcftools reheader -h header.txt -o "tmp.vcf.gz" "$vcf"
+    mv "tmp.vcf.gz" "$vcf"
 }
 
 
@@ -142,9 +183,13 @@ _rescue_non_pass() {
     bcftools view -m2 "$gvcf_name" -o "${sample_prefix}.vcf"
 
     if [[ "$strip_chr" == 'true' ]]; then
-        # remove chr prefix from sample vcf
+        # remove chr prefix from sample vcf and rescue vcf
         _strip_chr_prefix "${sample_prefix}.vcf" "${sample_prefix}.tmp.vcf"
         mv "${sample_prefix}.tmp.vcf" "${sample_prefix}.vcf"
+
+        _strip_chr_prefix "$rescue_vcf_name" "tmp.vcf"
+        mv tmp.vcf "${rescue_vcf_name/.gz/}"
+        rescue_vcf_name="${rescue_vcf_name/.gz/}"  # overwrite global variable to new file
     fi
 
     # Normalise and left align filtered vcf
@@ -157,6 +202,10 @@ _rescue_non_pass() {
 
     # sense check for logs how many variants were rescued
     echo "Total variants rescued: $(zgrep -v '^#' ${sample_prefix}.rescued.vcf.gz | wc -l)"
+
+    # modified description for FILTER field added by bcftools filter to better explain
+    # provenance of filter_tag
+    _modify_header "${sample_prefix}.rescued.vcf.gz"
 
     # Create a vcf with only PASS variants
     bcftools view -f PASS "${sample_prefix}_norm.vcf" -Oz -o "${sample_prefix}_pass.vcf.gz"
@@ -226,6 +275,10 @@ _rescue_filtered() {
     rescue_vcf="${sample_prefix}.rescued.vcf.gz"
     bcftools filter -m + -s "$filter_tag" --mask-file "$rescue_vcf_name" "$unfiltered_vcf_name" \
         | bcftools filter -i "FILTER~\"${filter_tag}\"" - -Oz -o "$rescue_vcf"
+
+    # modified description for FILTER field added by bcftools filter to better explain
+    # provenance of filter_tag
+    _modify_header "$rescue_vcf"
 
     # sense check for logs how many variants were rescued
     echo "Total variants rescued: $(zgrep -v '^#' $rescue_vcf | wc -l)"
