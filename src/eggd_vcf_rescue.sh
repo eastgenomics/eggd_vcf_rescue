@@ -155,7 +155,7 @@ _strip_chr_prefix() {
     local outname="$2"
 
     _decompress "$input_vcf"
-    awk '{gsub(/chr/,""); print}' "${input_vcf/.gz/}" > "$outname"
+    bcftools annotate --rename-chrs chr_prefix_map.txt "${input_vcf/.gz/}" > "$outname"
 }
 
 
