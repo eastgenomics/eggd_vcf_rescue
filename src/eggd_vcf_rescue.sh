@@ -158,6 +158,54 @@ _strip_chr_prefix() {
     bcftools annotate --rename-chrs chr_prefix_map.txt "${input_vcf/.gz/}" > "$outname"
 }
 
+_qc_filter_variants() {
+    : '''
+    Function: filters VCF based on af and qc thresholds. Currently will only
+    filter on AF and DP
+
+    Globals:
+        filtered_vcf : vcf of filtered variants to append to for output vcf
+        filter_AF :
+        filter_DP  :
+
+    Arguments:
+        None
+
+    Outputs:
+        None
+    '''
+    local filtered_vcf_qc_name_=$filtered_vcf_name
+    # check number of enteries before variant quality filtering
+    num_var=$(cat "${filtered_vcf_qc_name_}" | grep -v ^"#" | wc -l)
+    echo "VCF has $num_var variants before filtering poor quality variants"
+
+    bgzip $filtered_vcf_qc_name_
+    tabix -p vcf "${filtered_vcf_qc_name_}.gz"
+
+    # if AF is set, filter on AF
+    if [[ $filter_AF ]] && [[ $filter_DP ]]; then
+        echo "Filtering variants with AF less than $filter_AF and DP less than  $filter_DP"
+        bcftools view -i "FORMAT/AF[*]>$filter_AF" "${filtered_vcf_qc_name_}.gz" \
+        | bcftools view -i "FORMAT/DP>$filter_DP" - \
+        -o "$filtered_vcf_name"
+    fi
+
+    # if only one of the other is set:
+    if [[ $filter_AF ]] && [[ -z $filter_DP ]] ; then
+        echo "Filtering variants with AF less than $filter_AF"
+        bcftools view -i "FORMAT/AF[*]>$filter_AF" "${filtered_vcf_qc_name_}.gz" -o "$filtered_vcf_name"
+    fi
+
+    if [[ $filter_DP ]] && [[ -z $filter_AF ]]; then
+        echo "Filtering variants with DP less than $filter_DP"
+        bcftools view -i "FORMAT/DP>$filter_DP" "${filtered_vcf_qc_name_}.gz" -o "$filtered_vcf_name"
+    fi
+
+    # check number of enteries after variant quality filtering
+    num_var=$(cat "$filtered_vcf_name" | grep -v ^"#" | wc -l)
+    echo "VCF has $num_var variants after filtering poor quality variants"
+}
+
 
 _rescue_non_pass() {
     : '''
@@ -270,6 +318,11 @@ _rescue_filtered() {
     filtered_vcf_name="${sample_prefix}.filtered.norm.vcf"
     unfiltered_vcf_name="${sample_prefix}.unfiltered.norm.vcf"
 
+    # if variant QC (AF or DP) filtering is set, then filter
+    # the filtered VCF further
+    if [[ $filter_AF ]] || [[ $filter_DP ]]; then
+        _qc_filter_variants
+    fi
 
     # rescue variants against given rescue vcf
     rescue_vcf="${sample_prefix}.rescued.vcf.gz"
