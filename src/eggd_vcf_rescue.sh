@@ -164,15 +164,9 @@ _qc_filter_variants() {
     filter on AF and DP
 
     Globals:
-        filtered_vcf : vcf of filtered variants to append to for output vcf
-        filter_AF :
-        filter_DP  :
-
-    Arguments:
-        None
-
-    Outputs:
-        None
+        filtered_vcf_name : vcf of filtered variants to further filter
+        filter_AF : the AF value to filter on
+        filter_DP : the DP value to filter on
     '''
 
     # check number of enteries before variant quality filtering
