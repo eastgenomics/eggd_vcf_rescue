@@ -174,18 +174,18 @@ _qc_filter_variants() {
     Outputs:
         None
     '''
-    local filtered_vcf_qc_name_=$filtered_vcf_name
+
     # check number of enteries before variant quality filtering
-    num_var=$(cat "${filtered_vcf_qc_name_}" | grep -v ^"#" | wc -l)
+    num_var=$(cat "${filtered_vcf_name}" | grep -v ^"#" | wc -l)
     echo "VCF has $num_var variants before filtering poor quality variants"
 
-    bgzip $filtered_vcf_qc_name_
-    tabix -p vcf "${filtered_vcf_qc_name_}.gz"
+    bgzip $filtered_vcf_name
+    tabix -p vcf "${filtered_vcf_name}.gz"
 
     # if AF is set, filter on AF
     if [[ $filter_AF ]] && [[ $filter_DP ]]; then
         echo "Filtering variants with AF less than $filter_AF and DP less than  $filter_DP"
-        bcftools view -i "FORMAT/AF[*]>$filter_AF" "${filtered_vcf_qc_name_}.gz" \
+        bcftools view -i "FORMAT/AF[*]>$filter_AF" "${filtered_vcf_name}.gz" \
         | bcftools view -i "FORMAT/DP>$filter_DP" - \
         -o "$filtered_vcf_name"
     fi
@@ -193,15 +193,16 @@ _qc_filter_variants() {
     # if only one of the other is set:
     if [[ $filter_AF ]] && [[ -z $filter_DP ]] ; then
         echo "Filtering variants with AF less than $filter_AF"
-        bcftools view -i "FORMAT/AF[*]>$filter_AF" "${filtered_vcf_qc_name_}.gz" -o "$filtered_vcf_name"
+        bcftools view -i "FORMAT/AF[*]>$filter_AF" "${filtered_vcf_name}.gz" -o "$filtered_vcf_name"
     fi
 
     if [[ $filter_DP ]] && [[ -z $filter_AF ]]; then
         echo "Filtering variants with DP less than $filter_DP"
-        bcftools view -i "FORMAT/DP>$filter_DP" "${filtered_vcf_qc_name_}.gz" -o "$filtered_vcf_name"
+        bcftools view -i "FORMAT/DP>$filter_DP" "${filtered_vcf_name}.gz" -o "$filtered_vcf_name"
     fi
 
     # check number of enteries after variant quality filtering
+    rm "${filtered_vcf_name}.gz"
     num_var=$(cat "$filtered_vcf_name" | grep -v ^"#" | wc -l)
     echo "VCF has $num_var variants after filtering poor quality variants"
 }
