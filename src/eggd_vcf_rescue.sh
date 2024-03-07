@@ -158,15 +158,13 @@ _strip_chr_prefix() {
     bcftools annotate --rename-chrs chr_prefix_map.txt "${input_vcf/.gz/}" > "$outname"
 }
 
-_qc_filter_variants() {
+_filter_variants() {
     : '''
-    Function: filters VCF based on af and qc thresholds. Currently will only
-    filter on AF and DP
+    Function: filters VCF based on filter_string inputted by the user
 
     Globals:
         filtered_vcf_name : vcf of filtered variants to further filter
-        filter_AF : the AF value to filter on
-        filter_DP : the DP value to filter on
+        filter_string: string that will filter variant
     '''
 
     # check number of enteries before variant quality filtering
@@ -175,25 +173,7 @@ _qc_filter_variants() {
 
     bgzip $filtered_vcf_name
     tabix -p vcf "${filtered_vcf_name}.gz"
-
-    # if AF is set, filter on AF
-    if [[ $filter_AF ]] && [[ $filter_DP ]]; then
-        echo "Filtering variants with AF less than $filter_AF and DP less than  $filter_DP"
-        bcftools view -i "FORMAT/AF[*]>$filter_AF" "${filtered_vcf_name}.gz" \
-        | bcftools view -i "FORMAT/DP>$filter_DP" - \
-        -o "$filtered_vcf_name"
-    fi
-
-    # if only one of the other is set:
-    if [[ $filter_AF ]] && [[ -z $filter_DP ]] ; then
-        echo "Filtering variants with AF less than $filter_AF"
-        bcftools view -i "FORMAT/AF[*]>$filter_AF" "${filtered_vcf_name}.gz" -o "$filtered_vcf_name"
-    fi
-
-    if [[ $filter_DP ]] && [[ -z $filter_AF ]]; then
-        echo "Filtering variants with DP less than $filter_DP"
-        bcftools view -i "FORMAT/DP>$filter_DP" "${filtered_vcf_name}.gz" -o "$filtered_vcf_name"
-    fi
+    bcftools view -i  $filter_string "${filtered_vcf_name}.gz" -o "$filtered_vcf_name"
 
     # check number of enteries after variant quality filtering
     rm "${filtered_vcf_name}.gz"
@@ -315,8 +295,8 @@ _rescue_filtered() {
 
     # if variant QC (AF or DP) filtering is set, then filter
     # the filtered VCF further
-    if [[ $filter_AF ]] || [[ $filter_DP ]]; then
-        _qc_filter_variants
+    if [[ $filter_string ]]; then
+        _filter_variants
     fi
 
     # rescue variants against given rescue vcf
