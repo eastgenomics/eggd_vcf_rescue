@@ -109,20 +109,12 @@
       "help": "extra description to append to FILTER field in vcf header for given filter_tag"
     },
     {
-      "name": "filter_AF",
-      "label": "filter allele frequency",
-      "class": "float",
+      "name": "filter_string",
+      "label": "bcftools filter command",
+      "class": "string",
       "optional": true,
       "group": "optional",
-      "help": "filters out any variants with allele frequency value less than set. Write as a unit between 0-1."
-    },
-    {
-      "name": "filter_DP",
-      "label": "filter depth",
-      "class": "int",
-      "optional": true,
-      "group": "optional",
-      "help": "filters out any variants with depth value less than set"
+      "help": "filters variants that meet string input "
     }
   ],
   "outputSpec": [
