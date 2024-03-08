@@ -173,7 +173,7 @@ _filter_variants() {
 
     bgzip $filtered_vcf_name
     tabix -p vcf "${filtered_vcf_name}.gz"
-    bcftools view -i  $filter_string "${filtered_vcf_name}.gz" -o "$filtered_vcf_name"
+    eval ${filter_string} "${filtered_vcf_name}.gz" -o "$filtered_vcf_name"
 
     # check number of enteries after variant quality filtering
     rm "${filtered_vcf_name}.gz"
@@ -335,6 +335,7 @@ main() {
     echo "Value of boolean rescue_non_pass: '$rescue_non_pass'"
     echo "Value of boolean rescue_filtered: '$rescue_filtered"
     echo "Value of FILTER tag: '$filter_tag'"
+    echo "Value of FILTER string: '$filter_string'"
 
     _validate_inputs
 

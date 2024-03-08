@@ -110,11 +110,11 @@
     },
     {
       "name": "filter_string",
-      "label": "bcftools filter command",
+      "label": "BCFtools filter command",
       "class": "string",
       "optional": true,
       "group": "optional",
-      "help": "filters variants that meet string input "
+      "help": "filters variants that meet string input. The type of filterings that can be used by bcftools are listed here: https://samtools.github.io/bcftools/bcftools.html"
     }
   ],
   "outputSpec": [
