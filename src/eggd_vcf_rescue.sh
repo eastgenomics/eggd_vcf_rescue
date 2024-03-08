@@ -229,6 +229,14 @@ _rescue_non_pass() {
     # provenance of filter_tag
     _modify_header "${sample_prefix}.rescued.vcf.gz"
 
+    # if variant filtering is set using BCFtools filtering command,
+    # then run the filter_variants command
+    if [[ $filter_string ]]; then
+        filtered_vcf_name="${sample_prefix}.rescued"
+        _filter_variants
+    fi
+
+
     # Create a vcf with only PASS variants
     bcftools view -f PASS "${sample_prefix}_norm.vcf" -Oz -o "${sample_prefix}_pass.vcf.gz"
 
