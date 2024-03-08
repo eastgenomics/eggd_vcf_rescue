@@ -2,11 +2,8 @@
   "name": "eggd_vcf_rescue",
   "title": "VCF Rescue",
   "summary": "Filter in low support variants on specified locations or recover filtered out variants",
-  "properties": {
-    "githubRelease": "1.1.0"
-  },
   "dxapi": "1.0.0",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "inputSpec": [
     {
       "name": "gvcf",
