@@ -293,8 +293,8 @@ _rescue_filtered() {
     filtered_vcf_name="${sample_prefix}.filtered.norm.vcf"
     unfiltered_vcf_name="${sample_prefix}.unfiltered.norm.vcf"
 
-    # if variant QC (AF or DP) filtering is set, then filter
-    # the filtered VCF further
+    # if variant filtering is set using BCFtools filtering command,
+    # then run the filter_variants command
     if [[ $filter_string ]]; then
         _filter_variants
     fi
