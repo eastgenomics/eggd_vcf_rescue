@@ -90,7 +90,7 @@ _compress_and_index() {
     input_vcf=${input_vcf/.gz/}
 
     bgzip "$input_vcf"
-    bcftools index "${input_vcf}.gz"
+    bcftools index -f "${input_vcf}.gz"
 }
 
 
@@ -168,17 +168,16 @@ _filter_variants() {
     '''
 
     # check number of enteries before variant quality filtering
-    num_var=$(cat "${filtered_vcf_name}" | grep -v ^"#" | wc -l)
-    echo "VCF has $num_var variants before filtering poor quality variants"
+    num_var=$(grep -v ^"#"  "${filtered_vcf_name}" | wc -l)
+    echo "VCF has $num_var variants before filtering variants"
 
-    bgzip $filtered_vcf_name
-    tabix -p vcf "${filtered_vcf_name}.gz"
+    _compress_and_index $filtered_vcf_name
     eval ${filter_string} "${filtered_vcf_name}.gz" -o "$filtered_vcf_name"
 
     # check number of enteries after variant quality filtering
     rm "${filtered_vcf_name}.gz"
-    num_var=$(cat "$filtered_vcf_name" | grep -v ^"#" | wc -l)
-    echo "VCF has $num_var variants after filtering poor quality variants"
+    num_var=$(grep -v ^"#"  "${filtered_vcf_name}" | wc -l)
+    echo "VCF has $num_var variants after filtering variants"
 }
 
 
