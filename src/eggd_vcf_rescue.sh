@@ -89,7 +89,7 @@ _compress_and_index() {
     _decompress "$input_vcf"
     input_vcf=${input_vcf/.gz/}
 
-    bgzip "$input_vcf"
+    bgzip -f "$input_vcf"
     bcftools index -f "${input_vcf}.gz"
 }
 
@@ -167,15 +167,25 @@ _filter_variants() {
         filter_string: string that will filter variant
     '''
 
+    # If sample is not compressed, then compressed it it
+    # use command file which describes what type of file you have
+
+    if [[ "${filtered_vcf_name}" == *.vcf ]]; then
+        echo 'compress vcf'
+        _compress_and_index $filtered_vcf_name
+    else
+        echo 'vcf already compressed'
+        # rename the vcf to without .gz 
+        filtered_vcf_name=${filtered_vcf_name::-3}
+    fi
+
     # check number of enteries before variant quality filtering
-    num_var=$(grep -v ^"#"  "${filtered_vcf_name}" | wc -l)
+    num_var=$(zcat "${filtered_vcf_name}.gz" | grep -v ^"#" | wc -l)
     echo "VCF has $num_var variants before filtering variants"
 
-    _compress_and_index $filtered_vcf_name
     eval ${filter_string} "${filtered_vcf_name}.gz" -o "$filtered_vcf_name"
 
     # check number of enteries after variant quality filtering
-    rm "${filtered_vcf_name}.gz"
     num_var=$(grep -v ^"#"  "${filtered_vcf_name}" | wc -l)
     echo "VCF has $num_var variants after filtering variants"
 }
@@ -232,7 +242,7 @@ _rescue_non_pass() {
     # if variant filtering is set using BCFtools filtering command,
     # then run the filter_variants command
     if [[ $filter_string ]]; then
-        filtered_vcf_name="${sample_prefix}.rescued"
+        filtered_vcf_name="${sample_prefix}.rescued.vcf.gz"
         _filter_variants
     fi
 
