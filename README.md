@@ -35,7 +35,12 @@ To rescue variants filtered out, or of low quality, against positions to never e
 - `strip_chr` (`bool`): if true, will strip chr prefixes from input vcfs. Should be specified if given reference fasta does not contain chr prefixes.
 - `filter_tag` (`string`): tag to add to `FILTER` field of rescued variants (default: `rescued`), this will be appended to any existing FILTER fields (`bcftools filter -m +`).
 - `filter_tag_description` (`string`): additional description to append to FILTER line in header for provenance of rescued variants. Default description: `##FILTER=<ID={$filter_tag},Description="Record masked by region; variants added in eggd_vcf_rescue (DNAnexus job: $DX_JOB_ID)">`
-- `filter_string` (`string`): BCFtools filter command that can be used to filter variants in the filtered VCF even further within the app. The type of filterings that can be used by bcftools are all listed here: https://samtools.github.io/bcftools/bcftools.html
+- `filter_string` (`string`): BCFtools filter command that can be used to filter variants in the filtered VCF even further within the app. The type of filterings that can be used by bcftools are all listed here: https://samtools.github.io/bcftools/bcftools.html. Example formats:
+
+```
+  -ifilter_string='bcftools view -i "FORMAT/DP>99 & AF>0.03"'
+
+```
 
 
 ## What does this app output?
