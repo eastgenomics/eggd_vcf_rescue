@@ -39,7 +39,6 @@ To rescue variants filtered out, or of low quality, against positions to never e
 
 ```
   -ifilter_string='bcftools view -i "FORMAT/DP>99 & AF>0.03"'
-
 ```
 
 
