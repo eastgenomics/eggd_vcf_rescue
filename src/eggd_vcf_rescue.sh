@@ -89,8 +89,8 @@ _compress_and_index() {
     _decompress "$input_vcf"
     input_vcf=${input_vcf/.gz/}
 
-    bgzip "$input_vcf"
-    bcftools index "${input_vcf}.gz"
+    bgzip -f "$input_vcf"
+    bcftools index -f "${input_vcf}.gz"
 }
 
 
@@ -158,6 +158,38 @@ _strip_chr_prefix() {
     bcftools annotate --rename-chrs chr_prefix_map.txt "${input_vcf/.gz/}" > "$outname"
 }
 
+_filter_variants() {
+    : '''
+    Function: filters VCF based on filter_string inputted by the user
+
+    Globals:
+        filtered_vcf_name : vcf of filtered variants to further filter
+        filter_string: string that will filter variant
+    '''
+
+    # If sample is not compressed, then compressed it it
+    # use command file which describes what type of file you have
+
+    if [[ "${filtered_vcf_name}" == *.vcf ]]; then
+        echo 'compress vcf'
+        _compress_and_index $filtered_vcf_name
+    else
+        echo 'vcf already compressed'
+        # rename the vcf to without .gz 
+        filtered_vcf_name=${filtered_vcf_name::-3}
+    fi
+
+    # check number of enteries before variant quality filtering
+    num_var=$(zcat "${filtered_vcf_name}.gz" | grep -v ^"#" | wc -l)
+    echo "VCF has $num_var variants before filtering variants"
+
+    eval ${filter_string} "${filtered_vcf_name}.gz" -o "$filtered_vcf_name"
+
+    # check number of enteries after variant quality filtering
+    num_var=$(grep -v ^"#"  "${filtered_vcf_name}" | wc -l)
+    echo "VCF has $num_var variants after filtering variants"
+}
+
 
 _rescue_non_pass() {
     : '''
@@ -206,6 +238,14 @@ _rescue_non_pass() {
     # modified description for FILTER field added by bcftools filter to better explain
     # provenance of filter_tag
     _modify_header "${sample_prefix}.rescued.vcf.gz"
+
+    # if variant filtering is set using BCFtools filtering command,
+    # then run the filter_variants command
+    if [[ $filter_string ]]; then
+        filtered_vcf_name="${sample_prefix}.rescued.vcf.gz"
+        _filter_variants
+    fi
+
 
     # Create a vcf with only PASS variants
     bcftools view -f PASS "${sample_prefix}_norm.vcf" -Oz -o "${sample_prefix}_pass.vcf.gz"
@@ -270,6 +310,11 @@ _rescue_filtered() {
     filtered_vcf_name="${sample_prefix}.filtered.norm.vcf"
     unfiltered_vcf_name="${sample_prefix}.unfiltered.norm.vcf"
 
+    # if variant filtering is set using BCFtools filtering command,
+    # then run the filter_variants command
+    if [[ $filter_string ]]; then
+        _filter_variants
+    fi
 
     # rescue variants against given rescue vcf
     rescue_vcf="${sample_prefix}.rescued.vcf.gz"
@@ -307,6 +352,7 @@ main() {
     echo "Value of boolean rescue_non_pass: '$rescue_non_pass'"
     echo "Value of boolean rescue_filtered: '$rescue_filtered"
     echo "Value of FILTER tag: '$filter_tag'"
+    echo "Value of FILTER string: '$filter_string'"
 
     _validate_inputs
 

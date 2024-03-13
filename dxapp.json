@@ -2,11 +2,8 @@
   "name": "eggd_vcf_rescue",
   "title": "VCF Rescue",
   "summary": "Filter in low support variants on specified locations or recover filtered out variants",
-  "properties": {
-    "githubRelease": "1.1.0"
-  },
   "dxapi": "1.0.0",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "inputSpec": [
     {
       "name": "gvcf",
@@ -107,6 +104,14 @@
       "optional": true,
       "group": "optional",
       "help": "extra description to append to FILTER field in vcf header for given filter_tag"
+    },
+    {
+      "name": "filter_string",
+      "label": "BCFtools filter command",
+      "class": "string",
+      "optional": true,
+      "group": "optional",
+      "help": "filters variants that meet string input. The type of filterings that can be used by bcftools are listed here: https://samtools.github.io/bcftools/bcftools.html"
     }
   ],
   "outputSpec": [
