@@ -183,7 +183,19 @@ _filter_variants() {
     num_var=$(zcat "${filtered_vcf_name}.gz" | grep -v ^"#" | wc -l)
     echo "VCF has $num_var variants before filtering variants"
 
-    eval ${filter_string} "${filtered_vcf_name}.gz" -o "$filtered_vcf_name"
+    # split vep annotation if CSQ annotation is detected
+    vcf_vep = $(zgrep "CSQ=" "${filtered_vcf_name}.gz")
+    if [ -z "${vcf_vep}" ];
+        echo "VCF is annotated"
+        # so VCF filtering on CSQ can be done. Filtering requires the VCF to be split
+        # -c Extract the fields listed either as 0-based indexes or names
+        # -a INFO annotation to parse [CSQ]
+        bcftools +split-vep --columns - -a CSQ -Ou -p 'CSQ_'  "${filtered_vcf_name}.gz" |  bcftools annotate -x INFO/CSQ -o split_vcf.vcf
+        eval ${filter_string} split_vcf.vcf -o "$filtered_vcf_name"
+
+    else;
+        echo "VCF is not annotated"
+        eval ${filter_string} "${filtered_vcf_name}.gz" -o "$filtered_vcf_name"
 
     # check number of enteries after variant quality filtering
     num_var=$(grep -v ^"#"  "${filtered_vcf_name}" | wc -l)
@@ -355,6 +367,8 @@ main() {
     echo "Value of FILTER string: '$filter_string'"
 
     _validate_inputs
+
+    export BCFTOOLS_PLUGINS=/usr/local/libexec/bcftools/
 
     mark-section "Downloading inputs"
     dx-download-all-inputs --parallel
