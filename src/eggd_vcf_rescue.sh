@@ -183,7 +183,25 @@ _filter_variants() {
     num_var=$(zcat "${filtered_vcf_name}.gz" | grep -v ^"#" | wc -l)
     echo "VCF has $num_var variants before filtering variants"
 
-    eval ${filter_string} "${filtered_vcf_name}.gz" -o "$filtered_vcf_name"
+    # split vep annotation if CSQ in filter_string is detected
+    if [[ "$filter_string" == *CSQ* ]]; then
+        echo "filter string contains CSQ filtering"
+        # VCF filtering on CSQ can be done but requires the VCF to be split
+        # -c Extract the fields listed either as 0-based indexes or names
+        # -a INFO annotation to parse [CSQ]
+        # -p prepend string 'CSQ_' to all CSQ fields to avoid tag name conflicts
+        bcftools +split-vep --columns - -a CSQ -Ou -p 'CSQ_'  "${filtered_vcf_name}.gz" |  bcftools annotate -x INFO/CSQ -o split_vcf.vcf
+        eval ${filter_string} split_vcf.vcf -o filtered_split_vcf.vcf
+        # this VCF still has the split vcf annotation style so will need
+        # to match the sites and retain it from the filtered_vcf
+        _compress_and_index filtered_split_vcf.vcf
+        bcftools isec filtered_split_vcf.vcf.gz "${filtered_vcf_name}.gz" -w 2 -p isec
+        mv isec/0003.vcf "${filtered_vcf_name}"
+
+    else
+        echo "CSQ specific filtering NOT requested"
+        eval ${filter_string} "${filtered_vcf_name}.gz" -o "$filtered_vcf_name"
+    fi
 
     # check number of enteries after variant quality filtering
     num_var=$(grep -v ^"#"  "${filtered_vcf_name}" | wc -l)
@@ -355,6 +373,8 @@ main() {
     echo "Value of FILTER string: '$filter_string'"
 
     _validate_inputs
+
+    export BCFTOOLS_PLUGINS=/usr/local/libexec/bcftools/
 
     mark-section "Downloading inputs"
     dx-download-all-inputs --parallel
