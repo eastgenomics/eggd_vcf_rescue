@@ -184,15 +184,21 @@ _filter_variants() {
     echo "VCF has $num_var variants before filtering variants"
 
     # split vep annotation if CSQ annotation is detected
-    vcf_vep = $(zgrep "CSQ=" "${filtered_vcf_name}.gz")
-    if [ -z "${vcf_vep}" ];
+    zgrep "CSQ=" "${filtered_vcf_name}.gz" > vcf_vep
+    if [ -z "${vcf_vep}" ]; then
         echo "VCF is annotated"
         # so VCF filtering on CSQ can be done. Filtering requires the VCF to be split
         # -c Extract the fields listed either as 0-based indexes or names
         # -a INFO annotation to parse [CSQ]
         bcftools +split-vep --columns - -a CSQ -Ou -p 'CSQ_'  "${filtered_vcf_name}.gz" |  bcftools annotate -x INFO/CSQ -o split_vcf.vcf
-        eval ${filter_string} split_vcf.vcf -o "$filtered_vcf_name"
-    then
+        eval ${filter_string} split_vcf.vcf -o filtered_split_vcf.vcf
+        # this VCF still has the split vcf annotation style so will need
+        # to match the sites and retain it from the filtered_vcf
+        _compress_and_index filtered_split_vcf.vcf
+        bcftools isec filtered_split_vcf.vcf.gz "${filtered_vcf_name}.gz" -w 2 -p isec
+        mv isec/0003.vcf "${filtered_vcf_name}"
+
+    else
         echo "VCF is not annotated therefore expects no CSQ specific filtering"
         eval ${filter_string} "${filtered_vcf_name}.gz" -o "$filtered_vcf_name"
     fi
