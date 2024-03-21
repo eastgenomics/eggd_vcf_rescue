@@ -192,10 +192,10 @@ _filter_variants() {
         # -a INFO annotation to parse [CSQ]
         bcftools +split-vep --columns - -a CSQ -Ou -p 'CSQ_'  "${filtered_vcf_name}.gz" |  bcftools annotate -x INFO/CSQ -o split_vcf.vcf
         eval ${filter_string} split_vcf.vcf -o "$filtered_vcf_name"
-
-    else;
-        echo "VCF is not annotated"
+    then
+        echo "VCF is not annotated therefore expects no CSQ specific filtering"
         eval ${filter_string} "${filtered_vcf_name}.gz" -o "$filtered_vcf_name"
+    fi
 
     # check number of enteries after variant quality filtering
     num_var=$(grep -v ^"#"  "${filtered_vcf_name}" | wc -l)
